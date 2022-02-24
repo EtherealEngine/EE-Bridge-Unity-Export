@@ -1,0 +1,36 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel FastMap
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> InputMap;
+SamplerState sampler_InputMap;
+float4 InputProp;
+
+int width;
+int height;
+
+uint uWidth;
+uint uHeight;
+
+RWTexture2D<float4> Result;
+
+[numthreads(128,1,1)]
+void FastMap (uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+
+    uWidth = (uint)width;
+    uHeight = (uint)height;
+    
+    if (i >= uWidth * uHeight) return;
+    uint x = i % uWidth;
+    uint y = i / uWidth;
+    float u = x * 1.0 / uWidth;
+    float v = y * 1.0 / uHeight;
+
+    float2 pt = float2(u, v);
+    float4 mapVal = InputMap[uint2(x, y)];
+
+    Result[uint2(x, y)] = mapVal * InputProp; 
+}

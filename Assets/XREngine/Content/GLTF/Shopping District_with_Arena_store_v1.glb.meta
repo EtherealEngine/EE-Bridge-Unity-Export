@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: 57e7900e077d8b1478c92344ec3f2229
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 1
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 1
+    generateMipMaps: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  assetDependencies: []
+  reportItems:
+  - type: 2
+    code: 25
+    messages: []

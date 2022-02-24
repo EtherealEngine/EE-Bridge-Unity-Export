@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "gltf-import-export": "^1.0.18",
+    "path": "^0.12.7"
+  }
+}
