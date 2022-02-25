@@ -1,0 +1,1 @@
+cd Pipeline && npm install

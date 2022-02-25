@@ -1,0 +1,39 @@
+{
+  "exportPath": "..\\..\\..\\..\\..\\XR\\gtlfs",
+  "importPath": ".\\Resources",
+  "exporterSettings": {
+    "Export": {
+      "folder": "C:\\Users\\dinomut\\Documents\\XR\\gtlfs",
+      "name": "infile",
+      "splitChunks": false,
+      "skybox": false,
+      "unlit": false,
+      "noVertexColor": false,
+      "checkEmpty": true,
+      "clear": true
+    },
+    "Animation": {
+      "forceLinear": true
+    },
+    "NormalTexture": {
+      "maxSize": 1024,
+      "transparentType": 1,
+      "opaqueType": 0,
+      "pngFormat": 4,
+      "jpgQulity": 85
+    },
+    "HDR": {
+      "type": 1
+    },
+    "CubeTexture": {
+      "maxSize": 1024
+    },
+    "Lighting": {
+      "ambient": true,
+      "lightMap": true,
+      "lightMapSize": 1024,
+      "reflection": true,
+      "reflectionSize": 1024
+    }
+  }
+}

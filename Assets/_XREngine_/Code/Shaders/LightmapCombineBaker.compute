@@ -1,0 +1,275 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma kernel AddPadding
+
+int width;
+int height;
+
+uint uWidth;
+uint uHeight;
+
+float4 lightmapScaleOffset;
+
+RWStructuredBuffer<int> triangles;
+RWStructuredBuffer<float2> uv0;
+RWStructuredBuffer<float2> uv1;
+
+Texture2D<float4> baseColor;
+
+
+
+SamplerState sampler_baseColor;
+
+Texture2D<float4> lightmap;
+SamplerState sampler_lightmap;
+
+RWTexture2D<float> inTriMap;
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+
+int nTris;
+
+
+//--/from https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+float Sign(float2 p1, float2 p2, float2 p3)
+{
+    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+}
+
+bool PointInTriangle(float2 pt, float2 v1, float2 v2, float2 v3)
+{
+    float d1, d2, d3;
+    bool has_neg, has_pos;
+
+    d1 = Sign(pt, v1, v2);
+    d2 = Sign(pt, v2, v3);
+    d3 = Sign(pt, v3, v1);
+
+    has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(has_neg && has_pos);
+}
+
+bool PointInAnyTriangle(float2 pt, int lookUV)
+{
+    int triIndex = 0;
+
+    while (triIndex < nTris)
+    {
+        int i1 = triangles[triIndex * 3];
+        int i2 = triangles[triIndex * 3 + 1];
+        int i3 = triangles[triIndex * 3 + 2];
+
+        float2 v1 = 0;
+        float2 v2 = 0;
+        float2 v3 = 0;
+        if (lookUV == 1)
+        {
+            v1 = uv1[i1];
+            v2 = uv1[i2];
+            v3 = uv1[i3];
+        }
+        else
+        {
+            v1 = uv0[i1];
+            v2 = uv0[i2];
+            v3 = uv0[i3];
+        }
+
+        if (PointInTriangle(pt, v1, v2, v3))
+        {
+            return true;
+        }
+        triIndex++;
+    }
+    return false;
+}
+//--/
+
+float3 To3(float2 x)
+{
+    return float3(x.x, x.y, 0);
+}
+
+float2 UVAt(float2 pt, int lookUV, int outUV)
+{
+    int triIndex = 0;
+
+    while (triIndex < nTris)
+    {
+        int i1 = triangles[triIndex * 3];
+        int i2 = triangles[triIndex * 3 + 1];
+        int i3 = triangles[triIndex * 3 + 2];
+
+        float2 v1 = 0; 
+        float2 v2 = 0;
+        float2 v3 = 0; 
+        if (lookUV == 1)
+        {
+            v1 = uv1[i1];
+            v2 = uv1[i2];
+            v3 = uv1[i3];
+        }
+        else
+        {
+            v1 = uv0[i1];
+            v2 = uv0[i2];
+            v3 = uv0[i3];
+        }
+        
+        if (PointInTriangle(pt, v1, v2, v3))
+        {
+            float triArea = length(cross(To3(v2 - v1), To3(v3 - v1))) * 0.5;
+
+            float w1 = (length(cross(To3(v2 - pt), To3(v3 - pt))) * 0.5) / triArea;
+            float w2 = (length(cross(To3(v1 - pt), To3(v3 - pt))) * 0.5) / triArea;
+            float w3 = (length(cross(To3(v1 - pt), To3(v2 - pt))) * 0.5) / triArea;
+
+            float2 vOut1 = 0;
+            float2 vOut2 = 0;
+            float2 vOut3 = 0;
+            if (outUV == 1)
+            {
+                vOut1 = uv1[i1];
+                vOut2 = uv1[i2];
+                vOut3 = uv1[i3];
+            }
+            else
+            {
+                vOut1 = uv0[i1];
+                vOut2 = uv0[i2];
+                vOut3 = uv0[i3];
+            }
+            
+
+            float2 result = vOut1 * w1 + vOut2 * w2 + vOut3 * w3;
+            return result;
+        }
+        triIndex++;
+    }
+    return float2(-420, -69);
+}
+
+[numthreads(128,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    nTris = triangles.Length / 3;
+    uint i = id.x;
+
+    uWidth = (uint)width;
+    uHeight = (uint)height;
+
+    if (i >= uWidth * uHeight) return;
+    uint x = i % uWidth;
+    uint y = i / uWidth;
+    float u = x * 1.0 / uWidth;
+    float v = y * 1.0 / uHeight;
+
+    float2 pt = float2(u, v);
+
+    float2 thisUV0 = UVAt(pt, 0, 0);
+    float2 thisUV1 = UVAt(pt, 0, 1);
+    float4 albedo = baseColor.SampleLevel(sampler_baseColor, thisUV0, 0);
+    if (thisUV1.x != -420)
+    {
+        inTriMap[uint2(x, y)] = 1;
+        float4 light = lightmap.SampleLevel(sampler_lightmap, thisUV1 * lightmapScaleOffset.xy + lightmapScaleOffset.zw, 0);
+        //Result[pt] = float4(1, 0, 0, 1);
+        Result[uint2(x,y)] = albedo * light;
+    }
+    else
+    {
+        inTriMap[uint2(x, y)] = 0;
+        Result[uint2(x, y)] = 0;
+    }
+}
+
+
+
+[numthreads(128, 1, 1)]
+void AddPadding(uint3 id : SV_DispatchThreadID)
+{
+    const uint padAmt = 5;
+    uint i = id.x;
+    uWidth = (uint)width;
+    uHeight = (uint)height;
+    if (i >= uWidth * uHeight)
+    {
+        
+        return;
+    }
+
+    uint x = i % uWidth;
+    uint y = i / uWidth;
+    float u = x * 1.0 / uWidth;
+    float v = y * 1.0 / uHeight;
+    
+    float2 pt = float2(u, v);
+
+    if (inTriMap[uint2(x, y)] == 1)
+    {
+        //Result[uint2(x, y)] = float4(0.0, 0.0, 1.0, 1.0);
+        return;
+    }
+
+    for (uint offX = 0; offX < padAmt; offX++)
+    {
+        for (uint offY = 0; offY <= padAmt; offY++)
+        {
+            for (uint dir = 0; dir < 4; dir++)
+            {
+                uint nuX = x;
+                uint nuY = y;
+                if (dir % 2 == 1)
+                {
+                    nuX += offX;
+                    if (nuX >= uWidth)
+                    {
+                        nuX -= uWidth;
+                    }
+                }
+                else
+                {
+                    if (offX > nuX)
+                    {
+                        nuX += uWidth;
+                    }
+                    nuX -= offX;
+                }
+                if (dir < 2)
+                {
+                    nuY += offY;
+                    if (nuY >= uHeight)
+                    {
+                        nuY -= uHeight;
+                    }
+                }
+                else
+                {
+                    if (offY > nuY)
+                    {
+                        nuY += uHeight;
+                    }
+                    nuY -= offY;
+                }
+                
+
+                //if (nuY >= 0 && nuY < uHeight && nuX >= 0 && nuX < uWidth)
+  
+
+                if (inTriMap[uint2(nuX, nuY)] == 1)
+                {
+                    Result[uint2(x, y)] = Result[uint2(nuX, nuY)];
+                    return;
+                }
+                
+            }
+        }
+    }
+    //Result[uint2(x, y)] = float4(0, 1, 0, 1);
+}
+
+
