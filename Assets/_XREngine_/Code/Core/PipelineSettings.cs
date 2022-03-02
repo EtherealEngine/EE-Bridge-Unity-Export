@@ -36,6 +36,7 @@ namespace XREngine
         {
             public string GLTFName;
             public string XREProjectFolder;
+            public bool ExportLights;
             public bool ExportColliders;
             public bool ExportSkybox;
             public bool ExportEnvmap;
@@ -48,7 +49,8 @@ namespace XREngine
             {
                 PipelineSettings.GLTFName = GLTFName;
                 PipelineSettings.XREProjectFolder = this.XREProjectFolder;
-                
+
+                PipelineSettings.ExportLights = this.ExportLights;
                 PipelineSettings.ExportColliders = this.ExportColliders;
                 PipelineSettings.ExportSkybox = this.ExportSkybox;
                 PipelineSettings.ExportEnvmap = ExportEnvmap;
@@ -66,6 +68,7 @@ namespace XREngine
                 GLTFName = PipelineSettings.GLTFName;
                 XREProjectFolder = PipelineSettings.XREProjectFolder;
                
+                ExportLights = PipelineSettings.ExportLights;
                 ExportColliders = PipelineSettings.ExportColliders;
                 ExportSkybox = PipelineSettings.ExportSkybox;
                 ExportEnvmap = PipelineSettings.ExportEnvmap;
@@ -97,7 +100,7 @@ namespace XREngine
             Regex.Match(XREProjectFolder, @"[\w-]+[\\/]+[\w-]+[\\/]*$").Value;
 
         public static string XREScriptsFolder => XREProjectFolder + "/assets/scripts/";
-
+        public static bool ExportLights;
         public static bool ExportColliders;
         public static bool ExportSkybox;
         public static bool ExportEnvmap;
@@ -109,7 +112,7 @@ namespace XREngine
 
         public static LightmapMode lightmapMode;
 
-        public static int CombinedTextureResolution = 4096;
+        public static int CombinedTextureResolution;// = 8192;
         
         static PipelineSettings()
         {

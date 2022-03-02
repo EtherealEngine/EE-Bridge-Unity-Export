@@ -200,13 +200,16 @@ namespace SeinJS
                     extras = new JProperty("extras", new JObject());
 
             }
-
-            //check for xrengine components
-            var rp = tr.GetComponent<RPComponent>();
-            if(rp)
+            if(tr.gameObject.activeInHierarchy)
             {
-                extras = rp.Serialized;
+                //check for xrengine components
+                var rp = tr.GetComponent<RPComponent>();
+                if (rp)
+                {
+                    extras = rp.Serialized;
+                }
             }
+            
             
 
             node.Extras = extras;

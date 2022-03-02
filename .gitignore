@@ -116,19 +116,26 @@ dist
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Oo]utputs/
-/[Aa]ssets/Ignore/
 /[Aa]ssets/Bakery/
+/[Aa]ssets/Ignore/
+/[Aa]ssets/Settings/
+/[Aa]ssets/BakeryLightmaps/
 /[Aa]ssets/[Ee]ditor/x64/[Bb]akery/
 /[Aa]ssets/PanoramaToCubemap/
 /[Aa]ssets/VRPanorama/
 /[Aa]ssets/MeshBaker/
 /[Aa]ssets/output_images/
-/[Aa]ssets/XREngine/PipelineAssets/
-/[Aa]ssets/XREngine/PersistentAssets/
+/[Aa]ssets/_XREngine_/PipelineAssets/
+/[Aa]ssets/_XREngine_/PersistentAssets/
+/[Aa]ssets/_XREngine_/Content/
+!/[Aa]ssets/_XREngine/Content/Materials/Block.mat
+!/[Aa]ssets/_XREngine/Content/Materials/Null.mat
+!/[Aa]ssets/_XREngine/Content/Textures/militia_portrait.png
+
 # ignore Pipeline default settings conf file
 /[Pp]ipeline/*.conf
+Assets/VR_Sequence/
 /VR_Sequence/
-
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/

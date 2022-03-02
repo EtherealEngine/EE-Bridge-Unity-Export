@@ -6,7 +6,7 @@ namespace XREngine
 {
     public class IgnoreLightmap : MonoBehaviour
     {
-
+        public bool applyToChildren;
     }
 
 }

@@ -486,5 +486,7 @@ namespace SeinJS
             }
             AssetDatabase.CreateAsset(material, path + ".mat");
         }
+
     }
+
 }

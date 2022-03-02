@@ -16,11 +16,11 @@
       "forceLinear": true
     },
     "NormalTexture": {
-      "maxSize": 1024,
+      "maxSize": 8192,
       "transparentType": 1,
       "opaqueType": 0,
       "pngFormat": 4,
-      "jpgQulity": 85
+      "jpgQulity": 100
     },
     "HDR": {
       "type": 1

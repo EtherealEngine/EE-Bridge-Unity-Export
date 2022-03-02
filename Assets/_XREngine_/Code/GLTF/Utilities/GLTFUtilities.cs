@@ -9,6 +9,7 @@ namespace XREngine.Utilities
 {
     public class GLTFUtilities
     {
+#if UNITY_EDITOR
         private static ComputeShader _fastMapper;
         static ComputeShader FastMapper
         {
@@ -215,12 +216,15 @@ namespace XREngine.Utilities
                 tImporter.SetPlatformTextureSettings(new TextureImporterPlatformSettings
                 {
                     format = TextureImporterFormat.RGBA32,
+                    maxTextureSize = PipelineSettings.CombinedTextureResolution,
                     textureCompression = TextureImporterCompression.Uncompressed,
                     overridden = true
                 });
                 AssetDatabase.ImportAsset(assetPath);
             }
         }
+#endif
     }
+
 
 }

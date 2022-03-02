@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using XREngine;
 
 namespace SeinJS
 {
@@ -87,7 +88,7 @@ namespace SeinJS
 
         public class NormalTexture
 		{
-			public static int maxSize = 1024;
+			public static int maxSize = PipelineSettings.CombinedTextureResolution;
 			public static ENormalTextureType transparentType = ENormalTextureType.PNG;
             public static ENormalTextureType opaqueType = ENormalTextureType.JPG;
             public static EPNGTextureFormat pngFormat = EPNGTextureFormat.RGBA32;

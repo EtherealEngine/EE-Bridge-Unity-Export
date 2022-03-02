@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using GLTF.Schema;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using XREngine;
 
 namespace SeinJS
 {
@@ -21,6 +22,8 @@ namespace SeinJS
         public override void Serialize(ExporterEntry entry, Dictionary<string, Extension> extensions, UnityEngine.Object component = null, object options = null)
         {
             var light = component as Light;
+            if (!PipelineSettings.ExportLights) return;
+
             if (ExporterSettings.Lighting.lightMap && light.bakingOutput.isBaked)
             {
                 return;

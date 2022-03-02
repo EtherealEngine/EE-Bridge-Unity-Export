@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace UnityEditor
 {
-    internal class SeinPBRShaderGUI : ShaderGUI
+    public class SeinPBRShaderGUI : ShaderGUI
     {
         private static Texture2D brdfLUT;
 
