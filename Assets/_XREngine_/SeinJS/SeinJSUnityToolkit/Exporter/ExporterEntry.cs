@@ -204,7 +204,7 @@ namespace SeinJS
             {
                 //check for xrengine components
                 var rp = tr.GetComponent<RPComponent>();
-                if (rp)
+                if (rp && rp.enabled)
                 {
                     extras = rp.Serialized;
                 }
@@ -739,7 +739,7 @@ namespace SeinJS
             }
 
             bool isHDR = texture.format == TextureFormat.RGBAHalf || texture.format == TextureFormat.RGBAFloat || texture.format == TextureFormat.BC6H || texture.format == TextureFormat.RGB9e5Float;
-            string format = ".png";
+            string format = hasTransparency ? ".png" : ".jpg";
             var newTex = texture;
 
             if (isHDR)

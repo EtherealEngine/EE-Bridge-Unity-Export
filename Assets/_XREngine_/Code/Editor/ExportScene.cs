@@ -19,6 +19,8 @@ namespace XREngine
 {
     public class ExportScene : EditorWindow
     {
+        public static ExportScene instance;
+
         public enum State
         {
             INITIAL,
@@ -39,6 +41,7 @@ namespace XREngine
         {
             ExportScene window = (ExportScene)EditorWindow.GetWindow(typeof(ExportScene));
             window.state = State.INITIAL;
+            instance = window;
             window.Show();
         }
 
@@ -74,6 +77,7 @@ namespace XREngine
         Texture2D targTex, result;
         bool showAdvancedOptions;
         bool savePersistentSelected;
+        bool basicGLTFConvert;
         private void OnGUI()
         {
             #region Initial Menu
@@ -92,15 +96,26 @@ namespace XREngine
                     PipelineSettings.ExportLights = EditorGUILayout.Toggle("Lights", PipelineSettings.ExportLights);
                     PipelineSettings.ExportColliders = EditorGUILayout.Toggle("Colliders", PipelineSettings.ExportColliders);
                     PipelineSettings.ExportSkybox = EditorGUILayout.Toggle("Skybox", PipelineSettings.ExportSkybox);
-                    PipelineSettings.ExportEnvmap = EditorGUILayout.Toggle("Envmap", PipelineSettings.ExportEnvmap);
+                    //PipelineSettings.ExportEnvmap = EditorGUILayout.Toggle("Envmap", PipelineSettings.ExportEnvmap);
                     GUILayout.Space(8);
-                    PipelineSettings.InstanceMeshes = EditorGUILayout.Toggle("Instanced Meshes", PipelineSettings.InstanceMeshes);
                     PipelineSettings.meshMode = (MeshExportMode)EditorGUILayout.EnumPopup("Mesh Export Options", PipelineSettings.meshMode);
-                    GUILayout.Space(8);
                     PipelineSettings.lightmapMode = (LightmapMode)EditorGUILayout.EnumPopup("Lightmap Mode", PipelineSettings.lightmapMode);
                     GUILayout.Space(8);
                     PipelineSettings.CombinedTextureResolution = EditorGUILayout.IntField("Max Texture Resolution", PipelineSettings.CombinedTextureResolution);
                     GUILayout.Space(16);
+                    GUILayout.Label("GLTF Optimization");
+
+                    PipelineSettings.InstanceMeshes = EditorGUILayout.Toggle("Instanced Meshes", PipelineSettings.InstanceMeshes);
+
+                    PipelineSettings.MeshOptCompression = EditorGUILayout.Toggle("MeshOpt Compression", PipelineSettings.MeshOptCompression);
+
+                    PipelineSettings.KTX2Compression = EditorGUILayout.Toggle("KTX2 Compression", PipelineSettings.KTX2Compression);
+
+                    PipelineSettings.CombineMaterials = EditorGUILayout.Toggle("Combine Materials (breaks lightmaps)", PipelineSettings.CombineMaterials);
+
+                    PipelineSettings.CombineNodes = EditorGUILayout.Toggle("Combine Nodes (breaks xrengine components)", PipelineSettings.CombineNodes);
+                    GUILayout.Space(16);
+                   
                     if (GUILayout.Button("Save Settings as Default"))
                     {
                         PipelineSettings.SaveSettings();
@@ -183,6 +198,8 @@ namespace XREngine
                                 }
                             }
                         }
+                        GUILayout.Space(16);
+                        basicGLTFConvert = EditorGUILayout.Toggle("Use Basic GLTF Converter", basicGLTFConvert);
                         GUILayout.EndVertical();
                     }
                     GUILayout.Space(8);
@@ -229,15 +246,19 @@ namespace XREngine
         private Material BackupMaterial(Material material, Renderer _renderer, bool savePersistent)
         {
             if (matRegistry == null) matRegistry = new Dictionary<string, Material>();
+            bool hasLightmap = _renderer != null && _renderer.lightmapIndex >= 0 && LightmapSettings.lightmaps.Length > _renderer.lightmapIndex && _renderer.gameObject.GetComponent<IgnoreLightmap>() == null;
+            string registryKey = string.Format("{0}_{1}", material.name, hasLightmap ? _renderer.lightmapIndex : -2);
             
-            string registryKey = string.Format("{0}_{1}", material.name, _renderer ? _renderer.lightmapIndex : -2);
-            
-            if (matRegistry.ContainsKey(registryKey)) 
+            if (matRegistry.ContainsKey(registryKey))
+            {
                 return matRegistry[registryKey];
+            }
+                
             
             string origPath = AssetDatabase.GetAssetPath(material);
             if (origPath == null || Regex.IsMatch(origPath, @".*\.glb"))
             {
+
                 UnityEngine.Debug.Log("Creating link Material to glb");
                 Material dupe = new Material(material);
                 string dupeRoot = savePersistent ? PipelineSettings.PipelinePersistentFolder : PipelineSettings.PipelineAssetsFolder;
@@ -254,6 +275,7 @@ namespace XREngine
                 {
                     matLinks = new Dictionary<Material, Material>();
                 }
+
                 matLinks[dupe] = material;
                 UnityEngine.Debug.Log("material " + dupe.name + " linked to glb material " + material.name);
                 matRegistry[registryKey] = dupe;
@@ -270,6 +292,9 @@ namespace XREngine
             }
             return material;
         }
+
+        
+
         private Tuple<Material, string, string>[] BackupTextures(ref Material mat, bool savePersistent)
         {
             //Material mat = _mat;
@@ -316,8 +341,15 @@ namespace XREngine
         }
 
         Dictionary<Texture2D, Texture2D> texLinks;
-        private Texture2D GenerateAsset(Texture2D tex, out string path, bool savePersistent)
+        Dictionary<Texture2D, Tuple<Texture2D, string>> texRegistry;
+        public Texture2D GenerateAsset(Texture2D tex, out string path, bool savePersistent)
         {
+            if(texRegistry != null && texRegistry.ContainsKey(tex))
+            {
+                var registry = texRegistry[tex];
+                path = registry.Item2;
+                return registry.Item1;
+            }
             Texture2D nuTex = new Texture2D(tex.width, tex.height, tex.format, tex.mipmapCount, false);
             nuTex.name = tex.name + "_" + System.DateTime.Now.Ticks;
             Graphics.CopyTexture(tex, nuTex);
@@ -333,7 +365,10 @@ namespace XREngine
             UnityEngine.Debug.Log("Generated texture " + nuTex + " from " + tex);
             if (texLinks == null)
                 texLinks = new Dictionary<Texture2D, Texture2D>();
+            if (texRegistry == null)
+                texRegistry = new Dictionary<Texture2D, Tuple<Texture2D, string>>();
             texLinks[nuTex] = tex;
+            texRegistry[tex] = new Tuple<Texture2D, string>(tex, nuPath);
             path = nuPath;
             return nuTex;
         }
@@ -399,6 +434,8 @@ namespace XREngine
         List<IgnoreLightmap> ignoreChildren;
         private void StageLightmapping()
         {
+            MOZ_lightmap_Factory.ClearRegistry();
+
             if(ignoreChildren == null)
             {
                 ignoreChildren = new List<IgnoreLightmap>();
@@ -418,10 +455,12 @@ namespace XREngine
             {
                 foreach(var child in ignoreChildren)
                 {
-                    Destroy(child);
+                    DestroyImmediate(child);
                 }
                 ignoreChildren = null;
             }
+
+            MOZ_lightmap_Factory.ClearRegistry();
         }
         #endregion
 
@@ -639,6 +678,7 @@ namespace XREngine
 
         private void DeserializeMaterials(IEnumerable<Renderer> renderers)
         {
+            HashSet<Material> toRemove = new HashSet<Material>();
             foreach (var renderer in renderers)
             {
                 renderer.sharedMaterials = renderer.sharedMaterials.Select
@@ -647,22 +687,26 @@ namespace XREngine
                     {
                         if (matLinks.ContainsKey(mat))
                         {
-                            var tmp = mat;
+                            toRemove.Add(mat);
                             mat = matLinks[mat];
-                            matLinks.Remove(tmp);
                         }
                         return mat;
                     }
                 ).ToArray();
             }
+            foreach (var material in toRemove)
+            {
+                matLinks.Remove(material);
+            }
         }
 
         private void DeserializeAllMaterials()
         {
-            var renderers = FindObjectsOfType<Renderer>();
+            var renderers = FindObjectsOfType<MeshRenderer>();
             DeserializeMaterials(renderers);
             matRegistry = null;
             matLinks = null;
+            texRegistry = null;
             texLinks = null;
         }
 
@@ -679,11 +723,41 @@ namespace XREngine
             }
         }
 
+        struct MeshRegistryKey : IEquatable<MeshRegistryKey>
+        {
+            public Mesh mesh;
+            public string registryID;
+
+            public bool Equals(MeshRegistryKey other)
+            {
+                return mesh == other.mesh && registryID == other.registryID;
+            }
+
+            public MeshRegistryKey(Mesh mesh, Renderer renderer)
+            {
+                this.mesh = mesh;
+                bool hasLightmap = renderer.lightmapIndex >= 0 && LightmapSettings.lightmaps.Length > renderer.lightmapIndex && renderer.gameObject.GetComponent<IgnoreLightmap>() == null;
+                bool hasTxrOffset = renderer.sharedMaterial != null &&
+                    (renderer.sharedMaterial.mainTextureOffset != Vector2.one ||
+                     renderer.sharedMaterial.mainTextureScale != Vector2.one);
+                int lightIdx = hasLightmap ? renderer.lightmapIndex : -2;
+                Vector2 txrOffset = hasTxrOffset ? renderer.sharedMaterial.mainTextureOffset : Vector2.negativeInfinity;
+                registryID = String.Format("%d_%f_%f", lightIdx, txrOffset.x, txrOffset.y);
+            }
+        }
+
         private Mesh GenerateMesh(Renderer renderer, Mesh mesh, bool savePersistent = false)
         {
             glLinks = glLinks != null ? glLinks : new Dictionary<Mesh, Mesh>();
-            string assetFolder = savePersistent ? PipelineSettings.PipelinePersistentFolder : PipelineSettings.PipelineAssetsFolder;
+            glRegistry = glRegistry != null ? glRegistry : new Dictionary<MeshRegistryKey, Mesh>();
 
+            var regKey = new MeshRegistryKey(mesh, renderer);
+            if(glRegistry.ContainsKey(regKey))
+            {
+                return glRegistry[regKey];
+            }
+
+            string assetFolder = savePersistent ? PipelineSettings.PipelinePersistentFolder : PipelineSettings.PipelineAssetsFolder;
             if (!Directory.Exists(assetFolder))
             {
                 Directory.CreateDirectory(assetFolder);
@@ -692,14 +766,15 @@ namespace XREngine
             UnityEngine.Mesh nuMesh = UnityEngine.Object.Instantiate(mesh);
 
             AssetDatabase.CreateAsset(nuMesh, nuMeshPath);
+            glRegistry[regKey] = nuMesh;
             return nuMesh;
         }
 
         Dictionary<UnityEngine.Mesh, UnityEngine.Mesh> glLinks;
+        Dictionary<MeshRegistryKey, UnityEngine.Mesh> glRegistry;
         private void CreateUVBakedMeshes(bool savePersistent = false)
         {
-            
-            var renderers = FindObjectsOfType<Renderer>();
+            var renderers = FindObjectsOfType<Renderer>().Where((renderer) => renderer.gameObject.activeInHierarchy && renderer.enabled);
             foreach(var renderer in renderers)
             {
                 bool isSkinned = renderer.GetType() == typeof(SkinnedMeshRenderer);
@@ -800,16 +875,22 @@ namespace XREngine
 
         private void RestoreGLLinks(IEnumerable<MeshFilter> filts)
         {
+            List<Mesh> toRemove = new List<Mesh>();
             foreach (var filt in filts)
             {
                 if (filt &&
                     filt.sharedMesh != null &&
                     glLinks.ContainsKey(filt.sharedMesh))
                 {
-                    var tmp = filt.sharedMesh;
-                    filt.sharedMesh = glLinks[filt.sharedMesh];
-                    glLinks.Remove(tmp);
+                    toRemove.Add(filt.sharedMesh);
+                    var originalMesh = glLinks[filt.sharedMesh];
+                    filt.sharedMesh = originalMesh;
+                    glRegistry.Remove(new MeshRegistryKey(originalMesh, filt.GetComponent<MeshRenderer>()));
                 }
+            }
+            foreach(var doneMesh in toRemove)
+            {
+                glLinks.Remove(doneMesh);
             }
         }
 
@@ -820,6 +901,8 @@ namespace XREngine
                 MeshFilter[] filts = GameObject.FindObjectsOfType<MeshFilter>();
                 RestoreGLLinks(filts);
             }
+            glLinks = null;
+            glRegistry = null;
         }
 #endregion
 
@@ -980,12 +1063,12 @@ namespace XREngine
             {
                 FormatForExportingColliders();
             }
-
+            /*
             if (PipelineSettings.InstanceMeshes)
             {
                 FormatMeshInstancing();
             }
-
+            */
             SerializeAllMaterials();
 
             CreateBakedMeshes(savePersistent);
@@ -1042,12 +1125,12 @@ namespace XREngine
             {
                 CleanupExportEnvmap();
             }
-
+            /*
             if(PipelineSettings.InstanceMeshes)
             {
                 CleanupMeshInstancing();
             }
-
+            */
             CleanupLightmapping();
             CleanupLights();
 
@@ -1091,17 +1174,42 @@ namespace XREngine
             proc.StandardInput.WriteLine(string.Format("cd {0}", PipelineSettings.PipelineFolder));
             proc.StandardInput.Flush();
             string fileName = PipelineSettings.GLTFName;
-            if (SystemInfo.operatingSystem.ToLower().Contains("mac"))
+
+            if(basicGLTFConvert)
             {
-                //mac
-                proc.StandardInput.WriteLine(string.Format("\"/usr/local/bin/node\" gltf_converter.js {0} \"{1}\"", fileName, ExportPath));
+                /* old pipeline */
+                if (SystemInfo.operatingSystem.ToLower().Contains("mac"))
+                {
+                    //mac
+                    proc.StandardInput.WriteLine(string.Format("\"/usr/local/bin/node\" gltf_converter.js {0} \"{1}\"", fileName, ExportPath));
+                }
+                else
+                {
+                    //windows
+                    proc.StandardInput.WriteLine(string.Format("\"C:/Program Files/nodejs/node.exe\" gltf_converter.js {0} \"{1}\"", fileName, ExportPath));
+                }
             }
             else
             {
-                //windows
-                proc.StandardInput.WriteLine(string.Format("\"C:/Program Files/nodejs/node.exe\" gltf_converter.js {0} \"{1}\"", fileName, ExportPath));
+                if (SystemInfo.operatingSystem.ToLower().Contains("mac"))
+                {
+                    proc.StandardInput.WriteLine("export TOKTX_PATH=\"toktx\"");
+                    proc.StandardInput.WriteLine("export BASISU_PATH=\"basisu\"");
+                }
+                else
+                {
+                    proc.StandardInput.WriteLine("set TOKTX_PATH=\"toktx.exe\"");
+                    proc.StandardInput.WriteLine("set BASISU_PATH=\"basisu.exe\"");
+                }
+
+                proc.StandardInput.Flush();
+                proc.StandardInput.WriteLine(string.Format("gltfpack.exe -i ../Outputs/GLTF/{0}.gltf -o \"{1}{0}.glb\"{2}{3}{4}{5}{6} -noq", fileName, ExportPath,
+                    PipelineSettings.MeshOptCompression ? " -cc" : "",
+                    !PipelineSettings.CombineMaterials ? " -km" : "",
+                    !PipelineSettings.CombineNodes ? " -ke -kn" : "",
+                    PipelineSettings.InstanceMeshes ? " -mi" : "",
+                    PipelineSettings.KTX2Compression ? " -tc" : ""));
             }
-                
             
             proc.StandardInput.Flush();
             proc.StandardInput.Close();

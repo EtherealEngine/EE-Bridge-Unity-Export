@@ -229,61 +229,65 @@ namespace SeinJS
                 mesh = nuMesh;
             }
             */
-
-            var result = entry.SaveMesh(mesh, renderer);
-            var id = result.key;
-            var needProcessMatrials = result.value;
             var node = entry.tr2node[tr];
-            node.Mesh = id;
 
-            bool isInstanced = renderer.GetComponent<InstanceMeshNode>() != null;
-            if(isInstanced)
+            if (renderer.enabled && renderer.gameObject.activeInHierarchy)
             {
-                if(node.Extensions == null)
+                var result = entry.SaveMesh(mesh, renderer);
+                var id = result.key;
+                var needProcessMatrials = result.value;
+
+                node.Mesh = id;
+
+                bool isInstanced = renderer.GetComponent<InstanceMeshNode>() != null;
+                if (isInstanced)
                 {
-                    node.Extensions = new Dictionary<string, Extension>();
+                    if (node.Extensions == null)
+                    {
+                        node.Extensions = new Dictionary<string, Extension>();
+                    }
+                    ExtensionManager.Serialize(ExtensionManager.GetExtensionName(typeof(EXT_mesh_gpu_instancing_Factory)), entry, node.Extensions, component: renderer);
                 }
-                ExtensionManager.Serialize(ExtensionManager.GetExtensionName(typeof(EXT_mesh_gpu_instancing_Factory)), entry, node.Extensions, component:renderer);
-            }
 
-            if (needProcessMatrials)
-            {
-                var materialComponents = tr.GetComponents<SeinCustomMaterial>();
-                int i = 0;
-                var materials = renderer.sharedMaterials;
-                foreach (var primitive in id.Value.Primitives)
+                if (needProcessMatrials)
                 {
-                    if (i >= materials.Length)
+                    var materialComponents = tr.GetComponents<SeinCustomMaterial>();
+                    int i = 0;
+                    var materials = renderer.sharedMaterials;
+                    foreach (var primitive in id.Value.Primitives)
                     {
-                        Debug.LogError("No material in primitive" + " " + i + " in mesh " + mesh.name + " !");
-                        break;
-                    }
-
-                    if (materialComponents.Length == 1 && materials.Length == 1)
-                    {
-                        ExportComponentMaterial(materialComponents[0], primitive, entry);
-                        continue;
-                    }
-
-                    bool hasComponent = false;
-                    foreach (var materialComponent in materialComponents)
-                    {
-                        if (materialComponent.unityMaterialName == materials[i].name)
+                        if (i >= materials.Length)
                         {
-                            ExportComponentMaterial(materialComponent, primitive, entry);
-                            hasComponent = true;
+                            Debug.LogError("No material in primitive" + " " + i + " in mesh " + mesh.name + " !");
                             break;
                         }
-                    }
 
-                    if (!hasComponent)
-                    {
-                        //if (renderer.GetType() == typeof(SkinnedMeshRenderer))
-                        //    renderer = null;
-                        ExportNormalMaterial(materials[i], primitive, entry, renderer);
-                    }
+                        if (materialComponents.Length == 1 && materials.Length == 1)
+                        {
+                            ExportComponentMaterial(materialComponents[0], primitive, entry);
+                            continue;
+                        }
 
-                    i += 1;
+                        bool hasComponent = false;
+                        foreach (var materialComponent in materialComponents)
+                        {
+                            if (materialComponent.unityMaterialName == materials[i].name)
+                            {
+                                ExportComponentMaterial(materialComponent, primitive, entry);
+                                hasComponent = true;
+                                break;
+                            }
+                        }
+
+                        if (!hasComponent)
+                        {
+                            //if (renderer.GetType() == typeof(SkinnedMeshRenderer))
+                            //    renderer = null;
+                            ExportNormalMaterial(materials[i], primitive, entry, renderer);
+                        }
+
+                        i += 1;
+                    }
                 }
             }
         }

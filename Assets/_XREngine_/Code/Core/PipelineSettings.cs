@@ -40,7 +40,13 @@ namespace XREngine
             public bool ExportColliders;
             public bool ExportSkybox;
             public bool ExportEnvmap;
+
             public bool InstanceMeshes;
+            public bool MeshOptCompression;
+            public bool KTX2Compression;
+            public bool CombineMaterials;
+            public bool CombineNodes;
+            
             public MeshExportMode meshMode;
             public bool preserveLightmapping;
             public LightmapMode lightmapMode;
@@ -56,6 +62,10 @@ namespace XREngine
                 PipelineSettings.ExportEnvmap = ExportEnvmap;
 
                 PipelineSettings.InstanceMeshes = this.InstanceMeshes;
+                PipelineSettings.MeshOptCompression = this.MeshOptCompression;
+                PipelineSettings.KTX2Compression = this.KTX2Compression;
+                PipelineSettings.CombineMaterials = this.CombineMaterials;
+                PipelineSettings.CombineNodes = this.CombineNodes;
 
                 PipelineSettings.lightmapMode = this.lightmapMode;
                 PipelineSettings.preserveLightmapping = this.preserveLightmapping;
@@ -74,6 +84,10 @@ namespace XREngine
                 ExportEnvmap = PipelineSettings.ExportEnvmap;
                 
                 InstanceMeshes = PipelineSettings.InstanceMeshes;
+                MeshOptCompression = PipelineSettings.MeshOptCompression;
+                KTX2Compression = PipelineSettings.KTX2Compression;
+                CombineMaterials = PipelineSettings.CombineMaterials;
+                CombineNodes = PipelineSettings.CombineNodes;
 
                 lightmapMode = PipelineSettings.lightmapMode;
                 meshMode = PipelineSettings.meshMode;
@@ -104,7 +118,12 @@ namespace XREngine
         public static bool ExportColliders;
         public static bool ExportSkybox;
         public static bool ExportEnvmap;
+
         public static bool InstanceMeshes;
+        public static bool MeshOptCompression;
+        public static bool KTX2Compression;
+        public static bool CombineMaterials;
+        public static bool CombineNodes;
 
         public static MeshExportMode meshMode;
 

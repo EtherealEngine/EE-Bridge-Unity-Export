@@ -28,6 +28,7 @@ namespace XREngine.XREngineProject
 
         public virtual void HandleExport()
         {
+            if (!gameObject.activeInHierarchy || !enabled) return;
             Debug.Log("handling export for component " + name);
         }
 
