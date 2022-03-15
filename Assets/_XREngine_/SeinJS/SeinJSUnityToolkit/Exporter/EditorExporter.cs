@@ -194,41 +194,7 @@ namespace SeinJS
             {
                 return;
             }
-            /*
-            bool hasLightmap = renderer.lightmapIndex >= 0;
 
-            if ((hasLightmap && PipelineSettings.lightmapMode == LightmapMode.BAKE_SEPARATE) ||
-                Regex.IsMatch(AssetDatabase.GetAssetPath(mesh), @".*\.glb"))
-            {
-                MeshFilter filt = tr.GetComponent<MeshFilter>();
-
-                string nuMeshPath = PipelineSettings.PipelineAssetsFolder.Replace(Application.dataPath, "Assets") + renderer.transform.name + "_" + System.DateTime.Now.Ticks + ".asset";
-
-                UnityEngine.Mesh nuMesh = Object.Instantiate(mesh);
-                
-                AssetDatabase.CreateAsset(nuMesh, nuMeshPath);
-                AssetDatabase.Refresh();
-                if(hasLightmap)
-                {
-                    var off = renderer.lightmapScaleOffset;
-                    var nuUv2s = nuMesh.uv2.Select((uv2) => uv2 * new Vector2(off.x, off.y) + new Vector2(off.z, off.w)).ToArray();
-                    nuMesh.uv2 = nuUv2s;
-                    nuMesh.UploadMeshData(false);
-                }
-                if(filt != null)
-                    filt.sharedMesh = nuMesh;
-                else
-                {
-                    SkinnedMeshRenderer mrend = tr.GetComponent<SkinnedMeshRenderer>();
-                    if(mrend != null)
-                    {
-                        mrend.sharedMesh = nuMesh;
-                    }
-                }
-                glLinks[nuMesh] = mesh;
-                mesh = nuMesh;
-            }
-            */
             var node = entry.tr2node[tr];
 
             if (renderer.enabled && renderer.gameObject.activeInHierarchy)

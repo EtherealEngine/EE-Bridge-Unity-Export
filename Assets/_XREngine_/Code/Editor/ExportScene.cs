@@ -42,7 +42,23 @@ namespace XREngine
             ExportScene window = (ExportScene)EditorWindow.GetWindow(typeof(ExportScene));
             window.state = State.INITIAL;
             instance = window;
+            EditorSceneManager.activeSceneChanged += (x1, x2) => OnChangeMainScene();
+            EditorSceneManager.sceneOpened += (scene, mode) =>
+            {
+                OnChangeMainScene();
+            };
             window.Show();
+        }
+
+        private static void OnChangeMainScene()
+        {
+            UnityEngine.Debug.Log("on change scene");
+            var data = new PipelineSettings.Data();
+            data.Set();
+            if(!PipelineSettings.ReadSettingsFromConfig())
+            {
+                data.Apply();
+            }
         }
 
         Material _targetMat;
@@ -77,7 +93,6 @@ namespace XREngine
         Texture2D targTex, result;
         bool showAdvancedOptions;
         bool savePersistentSelected;
-        bool basicGLTFConvert;
         private void OnGUI()
         {
             #region Initial Menu
@@ -115,7 +130,10 @@ namespace XREngine
 
                     PipelineSettings.CombineNodes = EditorGUILayout.Toggle("Combine Nodes (breaks xrengine components)", PipelineSettings.CombineNodes);
                     GUILayout.Space(16);
-                   
+                    PipelineSettings.ExportFormat = (ExportFormat)EditorGUILayout.EnumPopup("Exported File Format", PipelineSettings.ExportFormat);
+                    GUILayout.Space(8);
+                    PipelineSettings.BasicGLTFConvert = EditorGUILayout.Toggle("Use Basic GLTF Converter", PipelineSettings.BasicGLTFConvert);
+                    GUILayout.Space(16);
                     if (GUILayout.Button("Save Settings as Default"))
                     {
                         PipelineSettings.SaveSettings();
@@ -198,8 +216,7 @@ namespace XREngine
                                 }
                             }
                         }
-                        GUILayout.Space(16);
-                        basicGLTFConvert = EditorGUILayout.Toggle("Use Basic GLTF Converter", basicGLTFConvert);
+                        
                         GUILayout.EndVertical();
                     }
                     GUILayout.Space(8);
@@ -246,7 +263,7 @@ namespace XREngine
         private Material BackupMaterial(Material material, Renderer _renderer, bool savePersistent)
         {
             if (matRegistry == null) matRegistry = new Dictionary<string, Material>();
-            bool hasLightmap = _renderer != null && _renderer.lightmapIndex >= 0 && LightmapSettings.lightmaps.Length > _renderer.lightmapIndex && _renderer.gameObject.GetComponent<IgnoreLightmap>() == null;
+            bool hasLightmap = XREUnity.HasLightmap(_renderer);
             string registryKey = string.Format("{0}_{1}", material.name, hasLightmap ? _renderer.lightmapIndex : -2);
             
             if (matRegistry.ContainsKey(registryKey))
@@ -736,7 +753,7 @@ namespace XREngine
             public MeshRegistryKey(Mesh mesh, Renderer renderer)
             {
                 this.mesh = mesh;
-                bool hasLightmap = renderer.lightmapIndex >= 0 && LightmapSettings.lightmaps.Length > renderer.lightmapIndex && renderer.gameObject.GetComponent<IgnoreLightmap>() == null;
+                bool hasLightmap = XREUnity.HasLightmap(renderer);
                 bool hasTxrOffset = renderer.sharedMaterial != null &&
                     (renderer.sharedMaterial.mainTextureOffset != Vector2.one ||
                      renderer.sharedMaterial.mainTextureScale != Vector2.one);
@@ -791,7 +808,7 @@ namespace XREngine
                 }
                 if (mesh == null) continue;
                 
-                bool hasLightmap = renderer.lightmapIndex >= 0 && LightmapSettings.lightmaps.Length > renderer.lightmapIndex && renderer.gameObject.GetComponent<IgnoreLightmap>() == null;
+                bool hasLightmap = XREUnity.HasLightmap(renderer);
                 bool hasTxrOffset = renderer.sharedMaterial != null && 
                     (renderer.sharedMaterial.mainTextureOffset != Vector2.one ||
                      renderer.sharedMaterial.mainTextureScale != Vector2.one);
@@ -926,7 +943,8 @@ namespace XREngine
 
         public void CleanupMeshInstancing()
         {
-            if(iNodes != null)
+            InstanceMeshNode.CleanupGeneratedMeshNodes();
+            if (iNodes != null)
             {
                 foreach(InstanceMeshNode node in iNodes)
                 {
@@ -1063,12 +1081,12 @@ namespace XREngine
             {
                 FormatForExportingColliders();
             }
-            /*
-            if (PipelineSettings.InstanceMeshes)
+            
+            if (PipelineSettings.InstanceMeshes && PipelineSettings.BasicGLTFConvert)
             {
                 FormatMeshInstancing();
             }
-            */
+            
             SerializeAllMaterials();
 
             CreateBakedMeshes(savePersistent);
@@ -1125,12 +1143,12 @@ namespace XREngine
             {
                 CleanupExportEnvmap();
             }
-            /*
-            if(PipelineSettings.InstanceMeshes)
+            
+            if(PipelineSettings.InstanceMeshes && PipelineSettings.BasicGLTFConvert)
             {
                 CleanupMeshInstancing();
             }
-            */
+            
             CleanupLightmapping();
             CleanupLights();
 
@@ -1175,7 +1193,7 @@ namespace XREngine
             proc.StandardInput.Flush();
             string fileName = PipelineSettings.GLTFName;
 
-            if(basicGLTFConvert)
+            if(PipelineSettings.BasicGLTFConvert)
             {
                 /* old pipeline */
                 if (SystemInfo.operatingSystem.ToLower().Contains("mac"))
@@ -1203,12 +1221,13 @@ namespace XREngine
                 }
 
                 proc.StandardInput.Flush();
-                proc.StandardInput.WriteLine(string.Format("gltfpack.exe -i ../Outputs/GLTF/{0}.gltf -o \"{1}{0}.glb\"{2}{3}{4}{5}{6} -noq", fileName, ExportPath,
+                proc.StandardInput.WriteLine(string.Format("gltfpack.exe -i ../Outputs/GLTF/{0}.gltf -o \"{1}{0}.{7}\"{2}{3}{4}{5}{6} -noq", fileName, ExportPath,
                     PipelineSettings.MeshOptCompression ? " -cc" : "",
                     !PipelineSettings.CombineMaterials ? " -km" : "",
                     !PipelineSettings.CombineNodes ? " -ke -kn" : "",
                     PipelineSettings.InstanceMeshes ? " -mi" : "",
-                    PipelineSettings.KTX2Compression ? " -tc" : ""));
+                    PipelineSettings.KTX2Compression ? " -tc" : "",
+                    PipelineSettings.ExportFormat == ExportFormat.GLTF ? "gltf" : "glb"));
             }
             
             proc.StandardInput.Flush();

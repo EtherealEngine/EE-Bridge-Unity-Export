@@ -256,7 +256,7 @@ namespace SeinJS
             {
                 cacheId += mat.GetInstanceID();
             }
-            bool hasLightmap = renderer.lightmapIndex >= 0 && renderer.GetComponent<IgnoreLightmap>() == null;
+            bool hasLightmap = XREUnity.HasLightmap(renderer);
             if(PipelineSettings.lightmapMode == LightmapMode.BAKE_SEPARATE && hasLightmap)
             {
                 var off = renderer.lightmapScaleOffset;

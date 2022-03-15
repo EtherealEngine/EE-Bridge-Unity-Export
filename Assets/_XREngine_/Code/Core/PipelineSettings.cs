@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 
 using System.IO;
 using System.Text.RegularExpressions;
@@ -28,11 +29,17 @@ namespace XREngine
         NO_MESHES
     }
 
+    public enum ExportFormat
+    {
+        GLB,
+        GLTF
+    }
+
     [InitializeOnLoad]
     public static class PipelineSettings
     {
         [System.Serializable]
-        struct Data
+        public struct Data
         {
             public string GLTFName;
             public string XREProjectFolder;
@@ -41,12 +48,16 @@ namespace XREngine
             public bool ExportSkybox;
             public bool ExportEnvmap;
 
+            public bool BasicGLTFConvert;
+
             public bool InstanceMeshes;
             public bool MeshOptCompression;
             public bool KTX2Compression;
             public bool CombineMaterials;
             public bool CombineNodes;
-            
+
+            public ExportFormat format;
+
             public MeshExportMode meshMode;
             public bool preserveLightmapping;
             public LightmapMode lightmapMode;
@@ -60,6 +71,10 @@ namespace XREngine
                 PipelineSettings.ExportColliders = this.ExportColliders;
                 PipelineSettings.ExportSkybox = this.ExportSkybox;
                 PipelineSettings.ExportEnvmap = ExportEnvmap;
+
+                PipelineSettings.ExportFormat = format;
+
+                PipelineSettings.BasicGLTFConvert = BasicGLTFConvert;
 
                 PipelineSettings.InstanceMeshes = this.InstanceMeshes;
                 PipelineSettings.MeshOptCompression = this.MeshOptCompression;
@@ -82,7 +97,10 @@ namespace XREngine
                 ExportColliders = PipelineSettings.ExportColliders;
                 ExportSkybox = PipelineSettings.ExportSkybox;
                 ExportEnvmap = PipelineSettings.ExportEnvmap;
-                
+
+                format = PipelineSettings.ExportFormat;
+                BasicGLTFConvert = PipelineSettings.BasicGLTFConvert;
+
                 InstanceMeshes = PipelineSettings.InstanceMeshes;
                 MeshOptCompression = PipelineSettings.MeshOptCompression;
                 KTX2Compression = PipelineSettings.KTX2Compression;
@@ -99,7 +117,14 @@ namespace XREngine
 
         public static readonly string ConversionFolder = Application.dataPath + "/../Outputs/GLTF/";
         public static readonly string PipelineFolder = Application.dataPath + "/../Pipeline/";
-        public static readonly string configFile = PipelineFolder + "settings.conf";
+        static string _configBasePath = PipelineFolder + "settings_";
+        public static string ConfigFile
+        {
+            get
+            {
+                return _configBasePath + EditorSceneManager.GetActiveScene().name + ".conf";
+            }
+        }
         public static readonly string PipelineAssetsFolder = Application.dataPath + "/_XREngine_/PipelineAssets/";
         public static readonly string PipelinePersistentFolder = Application.dataPath + "/_XREngine_/PersistentAssets/";
         public static string GLTFName;
@@ -119,11 +144,15 @@ namespace XREngine
         public static bool ExportSkybox;
         public static bool ExportEnvmap;
 
+        public static bool BasicGLTFConvert;
+
         public static bool InstanceMeshes;
         public static bool MeshOptCompression;
         public static bool KTX2Compression;
         public static bool CombineMaterials;
         public static bool CombineNodes;
+
+        public static ExportFormat ExportFormat;
 
         public static MeshExportMode meshMode;
 
@@ -138,25 +167,26 @@ namespace XREngine
             ReadSettingsFromConfig();
         }
 
-        public static void ReadSettingsFromConfig()
+        public static bool ReadSettingsFromConfig()
         {
-            var config = new FileInfo(configFile);
+            var config = new FileInfo(ConfigFile);
             if (!config.Exists)
             {
-                return;
+                return false;
             }
             var data = JsonConvert.DeserializeObject<Data>
             (
-                File.ReadAllText(configFile)
+                File.ReadAllText(ConfigFile)
             );
             data.Apply();
+            return true;
         }
 
         public static void SaveSettings()
         {
             var data = new Data();
             data.Set();
-            File.WriteAllText(configFile, JsonConvert.SerializeObject(data, Formatting.Indented));
+            File.WriteAllText(ConfigFile, JsonConvert.SerializeObject(data, Formatting.Indented));
         }
 
         public static void ClearPipelineJunk()

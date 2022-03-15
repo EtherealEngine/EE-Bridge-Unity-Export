@@ -31,6 +31,16 @@ namespace XREngine
 
             return result;
         }
+
+        public static bool HasLightmap(Renderer renderer)
+        {
+            return PipelineSettings.lightmapMode != LightmapMode.IGNORE &&
+                   renderer != null &&
+                   renderer.lightmapIndex >= 0 &&
+                   LightmapSettings.lightmaps.Length > renderer.lightmapIndex &&
+                   renderer.GetComponent<IgnoreLightmap>() == null
+                   ;
+        }
     }
 
 }
