@@ -184,6 +184,11 @@ namespace XREngine
                             LODFormatter.FormatLODs();
                         }
                         GUILayout.Space(8);
+                        if(GUILayout.Button("Convert LODs to Instancing"))
+                        {
+                            LODFormatter.ConvertToInstancing();
+                        }
+                        GUILayout.Space(8);
                        
                         if (GUILayout.Button("Undo MeshBake"))
                         {
@@ -396,7 +401,7 @@ namespace XREngine
         private void FormatForExportingLODs()
         {
             lodRegistry = new Dictionary<Transform, string>();
-            LODGroup[] lodGroups = GameObject.FindObjectsOfType<LODGroup>();
+            LODGroup[] lodGroups = GameObject.FindObjectsOfType<LODGroup>().Where((lg) => lg.gameObject.activeInHierarchy && lg.enabled).ToArray();
             foreach(var lodGroup in lodGroups)
             {
                 Transform tr = lodGroup.transform;
@@ -628,7 +633,7 @@ namespace XREngine
             matLinks = matLinks != null ? matLinks : new Dictionary<Material, Material>();
             texLinks = texLinks != null ? texLinks : new Dictionary<Texture2D, Texture2D>();
             var mats = renderers.SelectMany((rend) => rend.sharedMaterials.Select((mat) => new MatRend(mat, rend)))
-                .Where((x) => x != null && x.mat != null && x.rend != null).ToArray();
+                .Where((x) => x != null && x.mat != null && x.rend != null && x.rend.enabled && x.rend.gameObject.activeInHierarchy).ToArray();
 
             for (int i = 0; i < mats.Length; i++)
             {
@@ -740,14 +745,21 @@ namespace XREngine
             }
         }
 
-        struct MeshRegistryKey : IEquatable<MeshRegistryKey>
+        struct MeshRegistryKey
         {
             public Mesh mesh;
             public string registryID;
 
-            public bool Equals(MeshRegistryKey other)
+            public override bool Equals(object _other)
             {
+                if (_other == null) return false;
+                var other = (MeshRegistryKey)_other;
                 return mesh == other.mesh && registryID == other.registryID;
+            }
+
+            public override int GetHashCode()
+            {
+                return mesh.GetHashCode() ^ registryID.GetHashCode();
             }
 
             public MeshRegistryKey(Mesh mesh, Renderer renderer)

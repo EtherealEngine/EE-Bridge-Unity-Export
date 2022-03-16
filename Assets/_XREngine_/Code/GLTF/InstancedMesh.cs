@@ -12,16 +12,16 @@ namespace XREngine.XREngineProject
     public class InstancedMesh : MonoBehaviour
     {
         public bool applyToChildren;
-        public UnityEngine.Mesh Mesh
+        public UnityEngine.Mesh Mesh()
         {
-            get
-            {
-                return GetComponent<MeshFilter>() == null ? null : GetComponent<MeshFilter>().sharedMesh;
-            }
-            set
-            {
-                GetComponent<MeshFilter>().sharedMesh = value;
-            }
+            return GetComponent<MeshFilter>() == null ? null : GetComponent<MeshFilter>().sharedMesh;
+        }
+        public UnityEngine.Mesh Mesh(UnityEngine.Mesh value)
+        {
+            var filter = GetComponent<MeshFilter>();
+            var result = filter.sharedMesh;
+            filter.sharedMesh = value;
+            return result;
         }
         public UnityEngine.Material Material => GetComponent<MeshRenderer>().sharedMaterial;
     }
@@ -35,6 +35,18 @@ namespace XREngine.XREngineProject
         {
             public UnityEngine.Mesh mesh;
             public UnityEngine.Material material;
+            public override bool Equals(object obj)
+            {
+                return obj != null && 
+                    ((MeshRend)obj).mesh.name == mesh.name &&
+                    ((MeshRend)obj).material.name == material.name
+                    ;
+            }
+
+            public override int GetHashCode()
+            {
+                return mesh.name.GetHashCode() ^ material.name.GetHashCode();
+            }
         }
         static List<InstancedMesh> _generatedNodes;
         public static List<InstancedMesh> GeneratedNodes 
@@ -59,6 +71,7 @@ namespace XREngine.XREngineProject
             result = result && mesh1.vertexAttributeCount == mesh2.vertexAttributeCount;
             result = result && mesh1.triangles.Length == mesh2.triangles.Length;
             result = result && mesh1.subMeshCount == mesh2.subMeshCount;
+            result = result && mesh1.bounds.size == mesh2.bounds.size;
             return result;
         }
         public static InstanceMeshNode[] GenerateMeshNodes()
@@ -81,10 +94,10 @@ namespace XREngine.XREngineProject
                 var registry = new Dictionary<string, List<UnityEngine.Mesh>>();
                 foreach (var iNode in iNodes)
                 {
-                    var mesh = iNode.Mesh;
+                    var mesh = iNode.Mesh();
                     if (mesh == null) continue;
                     string name = mesh.name;
-                    string id = Regex.Match(name, @"^/w+").Value;
+                    string id = Regex.Match(name, @"^[a-zA-Z\-_]+").Value;
                     if(registry.ContainsKey(id))
                     {
                         var register = registry[id];
@@ -94,7 +107,7 @@ namespace XREngine.XREngineProject
                             var regMesh = register[j];
                             if(SameMesh(mesh, regMesh))
                             {
-                                iNode.Mesh = regMesh;
+                                iNode.Mesh(regMesh);
                                 set = true;
                             }    
                         }
@@ -103,20 +116,29 @@ namespace XREngine.XREngineProject
                             register.Add(mesh);
                         }
                     }
+                    else
+                    {
+                        registry[id] = new [] { mesh }.ToList();
+                    }
                 }
             }
-
-            var results = iNodes.Where((im) => im.gameObject.activeInHierarchy &&
+            var candidates = iNodes.Where((im) => im.gameObject.activeInHierarchy &&
                                                                            im.GetComponent<MeshRenderer>() != null &&
-                                                                           im.GetComponent<MeshRenderer>().enabled).GroupBy((x) => new MeshRend { material = x.Material, mesh = x.Mesh })
-                .Select((entry) =>
+                                                                           im.GetComponent<MeshRenderer>().enabled).ToArray();
+            var groups = candidates
+                               //.GroupBy((x) => new MeshRend { material = x.Material, mesh = x.Mesh }).ToArray();
+                               .GroupBy((instance) => instance.Mesh().name + instance.Material.name,
+                                        (instance) => new { material = instance.Material, mesh = instance.Mesh(), xform = instance.transform.transform },
+                                        (key, g) => new { Key = key, props = g.First(), instances = g.ToList() });
+            
+            var results = groups.Select((entry) =>
                 {
-                    GameObject go = new GameObject(entry.Key.mesh.name + "_instanced", new[] { typeof(InstanceMeshNode), typeof(MeshFilter), typeof(MeshRenderer) });
+                    GameObject go = new GameObject(entry.Key + "_instanced", new[] { typeof(InstanceMeshNode), typeof(MeshFilter), typeof(MeshRenderer) });
                     var iNode = go.GetComponent<InstanceMeshNode>();
-                    
-                    iNode.mesh = entry.Key.mesh;
-                    iNode.material = entry.Key.material;
-                    iNode.xforms = entry.Select((inode) => inode.GetComponent<Transform>()).ToArray();
+
+                    iNode.mesh = entry.props.mesh;
+                    iNode.material = entry.props.material;
+                    iNode.xforms = entry.instances.Select((inode) => inode.xform).ToArray();
                     
                     go.GetComponent<MeshFilter>().sharedMesh = iNode.mesh;
                     go.GetComponent<MeshRenderer>().sharedMaterial = iNode.material;
