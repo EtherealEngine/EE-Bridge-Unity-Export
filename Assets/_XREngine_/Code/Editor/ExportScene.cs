@@ -124,6 +124,8 @@ namespace XREngine
 
                     PipelineSettings.MeshOptCompression = EditorGUILayout.Toggle("MeshOpt Compression", PipelineSettings.MeshOptCompression);
 
+                    PipelineSettings.MeshQuantization = EditorGUILayout.Toggle("Mesh Quantization", PipelineSettings.MeshQuantization);
+
                     PipelineSettings.KTX2Compression = EditorGUILayout.Toggle("KTX2 Compression", PipelineSettings.KTX2Compression);
 
                     PipelineSettings.CombineMaterials = EditorGUILayout.Toggle("Combine Materials (breaks lightmaps)", PipelineSettings.CombineMaterials);
@@ -137,6 +139,11 @@ namespace XREngine
                     if (GUILayout.Button("Save Settings as Default"))
                     {
                         PipelineSettings.SaveSettings();
+                    }
+                    GUILayout.Space(32);
+                    if (GUILayout.Button("Refresh Settings"))
+                    {
+                        PipelineSettings.ReadSettingsFromConfig();
                     }
                     GUILayout.Space(16);
 
@@ -977,8 +984,10 @@ namespace XREngine
         /// Formats the scene to correctly export colliders to match XREngine colliders spec
         /// </summary>
         GameObject cRoot;
+        List<MeshRenderer> _disabled;
         private void FormatForExportingColliders()
         {
+            _disabled = new List<MeshRenderer>();
             cRoot = new GameObject("Colliders", typeof(ColliderParent));
             //Dictionary<Collider, Transform> parents = new Dictionary<Collider, Transform>();
             Material defaultMat = AssetDatabase.LoadMainAssetAtPath(defaultMatPath) as Material;
@@ -1012,6 +1021,10 @@ namespace XREngine
                     //rend.lightmapIndex = -1;
                     rend.material = defaultMat;
                     clone.transform.SetParent(cRoot.transform, true);
+
+                    MeshRenderer thisRend = collider.GetComponent<MeshRenderer>();
+                    thisRend.enabled = false;
+                    _disabled.Add(thisRend);
                 }
                 else
                 {
@@ -1023,14 +1036,18 @@ namespace XREngine
                     rend.enabled = true;
                     rend.lightmapIndex = -1;
                 }
-                
-                
-                
-                
             }
         }
         private void CleanUpExportingColliders()
         {
+            if(_disabled != null)
+            {
+                foreach(var rend in _disabled)
+                {
+                    rend.enabled = true;
+                }
+                _disabled = null;
+            }
             if(cRoot)
             {
                 DestroyImmediate(cRoot);
@@ -1233,13 +1250,14 @@ namespace XREngine
                 }
 
                 proc.StandardInput.Flush();
-                proc.StandardInput.WriteLine(string.Format("gltfpack.exe -i ../Outputs/GLTF/{0}.gltf -o \"{1}{0}.{7}\"{2}{3}{4}{5}{6} -noq", fileName, ExportPath,
+                proc.StandardInput.WriteLine(string.Format("gltfpack.exe -i ../Outputs/GLTF/{0}.gltf -o \"{1}{0}.{7}\"{2}{3}{4}{5}{6}{8}", fileName, ExportPath,
                     PipelineSettings.MeshOptCompression ? " -cc" : "",
                     !PipelineSettings.CombineMaterials ? " -km" : "",
                     !PipelineSettings.CombineNodes ? " -ke -kn" : "",
                     PipelineSettings.InstanceMeshes ? " -mi" : "",
                     PipelineSettings.KTX2Compression ? " -tc" : "",
-                    PipelineSettings.ExportFormat == ExportFormat.GLTF ? "gltf" : "glb"));
+                    PipelineSettings.ExportFormat == ExportFormat.GLTF ? "gltf" : "glb",
+                    PipelineSettings.MeshQuantization ? "" : " -noq"));
             }
             
             proc.StandardInput.Flush();

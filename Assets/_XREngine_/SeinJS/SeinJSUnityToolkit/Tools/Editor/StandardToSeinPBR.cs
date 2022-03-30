@@ -143,12 +143,10 @@ namespace SeinJS
                     scene.GetRootGameObjects().SelectMany((root) => 
                         RecursiveGetGOs(root)));
 
-            var materials = gos.Where((go) => go.activeInHierarchy)
-                .SelectMany((go) => 
-                    go.GetComponent<Renderer>() ? 
-                    go.GetComponent<Renderer>().sharedMaterials : 
-                    new Material[0]).Distinct().ToList();
-            //var needBak = true;// CheckNeedBackup();
+            var materials = gos
+                .Where((go) => go.activeInHierarchy && go.GetComponent<Renderer>() && go.GetComponent<Renderer>().enabled)
+                .SelectMany((go) =>  go.GetComponent<Renderer>().sharedMaterials)
+                .Distinct().ToList();
             
             for(int i = 0; i < materials.Count; i++)
             {

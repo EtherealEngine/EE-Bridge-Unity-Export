@@ -22,8 +22,8 @@ namespace UnityGLTF.Extensions
 				localScale = node.Scale.ToUnityVector3();
 			}
 
-			position = localPosition.switchHandedness();
-			rotation = localRotation.switchHandedness();
+			position = localPosition;//.switchHandedness();
+			rotation = localRotation;//.switchHandedness();
 			scale = new Vector3(localScale.x, localScale.y, localScale.z);
 		}
 

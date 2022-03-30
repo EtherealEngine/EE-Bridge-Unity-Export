@@ -52,6 +52,7 @@ namespace XREngine
 
             public bool InstanceMeshes;
             public bool MeshOptCompression;
+            public bool MeshQuantization;
             public bool KTX2Compression;
             public bool CombineMaterials;
             public bool CombineNodes;
@@ -78,6 +79,7 @@ namespace XREngine
 
                 PipelineSettings.InstanceMeshes = this.InstanceMeshes;
                 PipelineSettings.MeshOptCompression = this.MeshOptCompression;
+                PipelineSettings.MeshQuantization = this.MeshQuantization;
                 PipelineSettings.KTX2Compression = this.KTX2Compression;
                 PipelineSettings.CombineMaterials = this.CombineMaterials;
                 PipelineSettings.CombineNodes = this.CombineNodes;
@@ -103,6 +105,7 @@ namespace XREngine
 
                 InstanceMeshes = PipelineSettings.InstanceMeshes;
                 MeshOptCompression = PipelineSettings.MeshOptCompression;
+                MeshQuantization = PipelineSettings.MeshQuantization;
                 KTX2Compression = PipelineSettings.KTX2Compression;
                 CombineMaterials = PipelineSettings.CombineMaterials;
                 CombineNodes = PipelineSettings.CombineNodes;
@@ -148,6 +151,7 @@ namespace XREngine
 
         public static bool InstanceMeshes;
         public static bool MeshOptCompression;
+        public static bool MeshQuantization;
         public static bool KTX2Compression;
         public static bool CombineMaterials;
         public static bool CombineNodes;
@@ -162,6 +166,7 @@ namespace XREngine
 
         public static int CombinedTextureResolution;// = 8192;
         
+
         static PipelineSettings()
         {
             ReadSettingsFromConfig();
@@ -193,19 +198,23 @@ namespace XREngine
         {
             Regex filter = new Regex(@".*\.(jpg|png|tga|asset|mat)");
             var pipelineFiles = Directory.GetFiles(PipelineFolder);
-            foreach(var path in pipelineFiles)
+            Queue<string> q = new Queue<string>(pipelineFiles);
+            List<string> toRemove = new List<string>();
+            while(q.Count > 0)
             {
+                string path = q.Dequeue();
                 if(Directory.Exists(path))
                 {
-                    Directory.Delete(path);
+                    string[] contents = Directory.GetFiles(path);
+                    contents.ToList().ForEach((x) => q.Enqueue(x));
                 }
                 else
                 if(filter.IsMatch(path))
                 {
-                    File.Delete(path);
+                    toRemove.Add(path);
                 }
             }
-            
+            AssetDatabase.DeleteAssets(toRemove.ToArray(), new List<string>());
             AssetDatabase.DeleteAsset(PipelineAssetsFolder.Replace(Application.dataPath, "Assets"));
         }
     }
