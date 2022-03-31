@@ -83,9 +83,12 @@ namespace XREngine.XREngineProject
             {
                 foreach(var renderer in XREUnity.ChildComponents<MeshRenderer>(parent.transform))
                 {
-                    var iNode = renderer.gameObject.AddComponent<InstancedMesh>();
-                    GeneratedNodes.Add(iNode);
-                    iNodes.Append(iNode);
+                    if(!renderer.gameObject.GetComponent<InstancedMesh>())
+                    {
+                        var iNode = renderer.gameObject.AddComponent<InstancedMesh>();
+                        GeneratedNodes.Add(iNode);
+                        iNodes.Append(iNode);
+                    }
                 }
             }
             

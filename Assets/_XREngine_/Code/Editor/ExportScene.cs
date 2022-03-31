@@ -91,7 +91,7 @@ namespace XREngine
         }
 
         Texture2D targTex, result;
-        bool showAdvancedOptions;
+        bool showAdvancedOptions, showOptimization, baseSettings;
         bool savePersistentSelected;
         private void OnGUI()
         {
@@ -100,42 +100,52 @@ namespace XREngine
             {
 
                 case State.INITIAL:
-                    PipelineSettings.GLTFName = EditorGUILayout.TextField("Name:", PipelineSettings.GLTFName);
-
-                    if (GUILayout.Button("Set Output Directory"))
+                    baseSettings = EditorGUILayout.Foldout(baseSettings, "Base Settings");
+                    if (baseSettings)
                     {
-                        PipelineSettings.XREProjectFolder = EditorUtility.SaveFolderPanel("Output Directory", PipelineSettings.XREProjectFolder, "");
+                        PipelineSettings.GLTFName = EditorGUILayout.TextField("Name:", PipelineSettings.GLTFName);
+
+                        if (GUILayout.Button("Set Output Directory"))
+                        {
+                            PipelineSettings.XREProjectFolder = EditorUtility.SaveFolderPanel("Output Directory", PipelineSettings.XREProjectFolder, "");
+                        }
+                        GUILayout.Space(8);
+                        GUILayout.Label("Export Components:");
+                        PipelineSettings.ExportLights = EditorGUILayout.Toggle("Lights", PipelineSettings.ExportLights);
+                        PipelineSettings.ExportColliders = EditorGUILayout.Toggle("Colliders", PipelineSettings.ExportColliders);
+                        PipelineSettings.ExportSkybox = EditorGUILayout.Toggle("Skybox", PipelineSettings.ExportSkybox);
+                        //PipelineSettings.ExportEnvmap = EditorGUILayout.Toggle("Envmap", PipelineSettings.ExportEnvmap);
+                        GUILayout.Space(8);
+                        PipelineSettings.meshMode = (MeshExportMode)EditorGUILayout.EnumPopup("Mesh Export Options", PipelineSettings.meshMode);
+                        PipelineSettings.lightmapMode = (LightmapMode)EditorGUILayout.EnumPopup("Lightmap Mode", PipelineSettings.lightmapMode);
+                        GUILayout.Space(8);
+                        PipelineSettings.CombinedTextureResolution = EditorGUILayout.IntField("Max Texture Resolution", PipelineSettings.CombinedTextureResolution);
                     }
-                    GUILayout.Space(8);
-                    GUILayout.Label("Export Components:");
-                    PipelineSettings.ExportLights = EditorGUILayout.Toggle("Lights", PipelineSettings.ExportLights);
-                    PipelineSettings.ExportColliders = EditorGUILayout.Toggle("Colliders", PipelineSettings.ExportColliders);
-                    PipelineSettings.ExportSkybox = EditorGUILayout.Toggle("Skybox", PipelineSettings.ExportSkybox);
-                    //PipelineSettings.ExportEnvmap = EditorGUILayout.Toggle("Envmap", PipelineSettings.ExportEnvmap);
-                    GUILayout.Space(8);
-                    PipelineSettings.meshMode = (MeshExportMode)EditorGUILayout.EnumPopup("Mesh Export Options", PipelineSettings.meshMode);
-                    PipelineSettings.lightmapMode = (LightmapMode)EditorGUILayout.EnumPopup("Lightmap Mode", PipelineSettings.lightmapMode);
-                    GUILayout.Space(8);
-                    PipelineSettings.CombinedTextureResolution = EditorGUILayout.IntField("Max Texture Resolution", PipelineSettings.CombinedTextureResolution);
+                    
                     GUILayout.Space(16);
-                    GUILayout.Label("GLTF Optimization");
 
-                    PipelineSettings.InstanceMeshes = EditorGUILayout.Toggle("Instanced Meshes", PipelineSettings.InstanceMeshes);
+                    showOptimization = EditorGUILayout.Foldout(showOptimization, "GLTF Optimization");
 
-                    PipelineSettings.MeshOptCompression = EditorGUILayout.Toggle("MeshOpt Compression", PipelineSettings.MeshOptCompression);
+                    if (showOptimization)
+                    {
+                        PipelineSettings.InstanceMeshes = EditorGUILayout.Toggle("Instanced Meshes", PipelineSettings.InstanceMeshes);
 
-                    PipelineSettings.MeshQuantization = EditorGUILayout.Toggle("Mesh Quantization", PipelineSettings.MeshQuantization);
+                        PipelineSettings.MeshOptCompression = EditorGUILayout.Toggle("MeshOpt Compression", PipelineSettings.MeshOptCompression);
 
-                    PipelineSettings.KTX2Compression = EditorGUILayout.Toggle("KTX2 Compression", PipelineSettings.KTX2Compression);
+                        PipelineSettings.MeshQuantization = EditorGUILayout.Toggle("Mesh Quantization", PipelineSettings.MeshQuantization);
 
-                    PipelineSettings.CombineMaterials = EditorGUILayout.Toggle("Combine Materials (breaks lightmaps)", PipelineSettings.CombineMaterials);
+                        PipelineSettings.KTX2Compression = EditorGUILayout.Toggle("KTX2 Compression", PipelineSettings.KTX2Compression);
 
-                    PipelineSettings.CombineNodes = EditorGUILayout.Toggle("Combine Nodes (breaks xrengine components)", PipelineSettings.CombineNodes);
-                    GUILayout.Space(16);
-                    PipelineSettings.ExportFormat = (ExportFormat)EditorGUILayout.EnumPopup("Exported File Format", PipelineSettings.ExportFormat);
-                    GUILayout.Space(8);
-                    PipelineSettings.BasicGLTFConvert = EditorGUILayout.Toggle("Use Basic GLTF Converter", PipelineSettings.BasicGLTFConvert);
-                    GUILayout.Space(16);
+                        PipelineSettings.CombineMaterials = EditorGUILayout.Toggle("Combine Materials (breaks lightmaps)", PipelineSettings.CombineMaterials);
+
+                        PipelineSettings.CombineNodes = EditorGUILayout.Toggle("Combine Nodes (breaks xrengine components)", PipelineSettings.CombineNodes);
+                        GUILayout.Space(16);
+                        PipelineSettings.ExportFormat = (ExportFormat)EditorGUILayout.EnumPopup("Exported File Format", PipelineSettings.ExportFormat);
+                        GUILayout.Space(8);
+                        PipelineSettings.BasicGLTFConvert = EditorGUILayout.Toggle("Use Basic GLTF Converter", PipelineSettings.BasicGLTFConvert);
+                        GUILayout.Space(16);
+                    }
+                    
                     if (GUILayout.Button("Save Settings as Default"))
                     {
                         PipelineSettings.SaveSettings();
@@ -285,7 +295,7 @@ namespace XREngine
                 
             
             string origPath = AssetDatabase.GetAssetPath(material);
-            if (origPath == null || Regex.IsMatch(origPath, @".*\.glb"))
+            if (origPath == null || Regex.IsMatch(origPath, @".*\.[(glb)(fbx)]"))
             {
 
                 UnityEngine.Debug.Log("Creating link Material to glb");
@@ -306,7 +316,7 @@ namespace XREngine
                 }
 
                 matLinks[dupe] = material;
-                UnityEngine.Debug.Log("material " + dupe.name + " linked to glb material " + material.name);
+                UnityEngine.Debug.Log("material " + dupe.name + " linked to material " + material.name);
                 matRegistry[registryKey] = dupe;
                 Material check = material;
                 foreach (var renderer in FindObjectsOfType<Renderer>())
@@ -359,7 +369,7 @@ namespace XREngine
             {
                 var tex = texture.Item2;
                 string texPath = AssetDatabase.GetAssetPath(tex);
-                if (texPath == null || texPath == "" || Regex.IsMatch(texPath, @".*\.glb"))
+                if (texPath == null || texPath == "" || Regex.IsMatch(texPath, @".*\.[(glb)(fbx)]"))
                 {
                     string nuPath;
                     Texture2D nuTex = GenerateAsset(tex, out nuPath, savePersistent);
@@ -629,9 +639,9 @@ namespace XREngine
 
         private void DeserializeSelectedAssets()
         {
-            var renderers = Selection.gameObjects.Select((go) => go.GetComponent<Renderer>()).Where((rend) => rend != null);
+            var renderers = Renderers;
             DeserializeMaterials(renderers);
-            RestoreGLLinks(renderers.Select((rend) => rend.GetComponent<MeshFilter>()).Where((filt) => filt != null && filt.sharedMesh != null));
+            RestoreGLLinks(renderers);
         }
 
         private void SerializeMaterials(IEnumerable<Renderer> renderers, bool savePersistent = false)
@@ -639,8 +649,11 @@ namespace XREngine
             matRegistry = matRegistry != null ? matRegistry : new Dictionary<string, Material>();
             matLinks = matLinks != null ? matLinks : new Dictionary<Material, Material>();
             texLinks = texLinks != null ? texLinks : new Dictionary<Texture2D, Texture2D>();
-            var mats = renderers.SelectMany((rend) => rend.sharedMaterials.Select((mat) => new MatRend(mat, rend)))
-                .Where((x) => x != null && x.mat != null && x.rend != null && x.rend.enabled && x.rend.gameObject.activeInHierarchy).ToArray();
+            var mats = renderers
+                .SelectMany((rend) => rend.sharedMaterials
+                .Select((mat) => new MatRend(mat, rend)))
+                .Where((x) => x != null && x.mat != null && x.rend != null && x.rend.enabled && x.rend.gameObject.activeInHierarchy)
+                .ToArray();
 
             for (int i = 0; i < mats.Length; i++)
             {
@@ -671,7 +684,7 @@ namespace XREngine
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             UnityEngine.Debug.Log("processed materials");
-            var updates = mats.GroupBy((mat) => mat.rend).Select((rGroup) =>
+            var rgroups = mats.GroupBy((mat) => mat.rend).Select((rGroup) =>
             new Dictionary<Renderer, Material[]>
             (
                 new KeyValuePair<Renderer, Material[]>[]
@@ -682,27 +695,37 @@ namespace XREngine
                         rGroup.Select((r) => r.mat).ToArray()
                     )
                 }
-            )).Aggregate((rGroup1, rGroup2) =>
+            ));
+            if(rgroups.Count() > 0)
             {
-                if (rGroup2 == null) return rGroup1;
-                if (rGroup1 == null) return rGroup2;
-                foreach (var key in rGroup2.Keys)
+                var updates = rgroups.Aggregate((rGroup1, rGroup2) =>
                 {
-                    rGroup1[key] = rGroup2[key];
-                }
-                return rGroup2;
-            });
-            foreach (var update in updates)
-            {
-                update.Key.sharedMaterials = update.Value;
+                    if (rGroup2 == null) return rGroup1;
+                    if (rGroup1 == null) return rGroup2;
+                    foreach (var key in rGroup2.Keys)
+                    {
+                        rGroup1[key] = rGroup2[key];
+                    }
+                    return rGroup2;
+                });
+                if (updates != null)
+                    foreach (var update in updates)
+                    {
+                        update.Key.sharedMaterials = update.Value;
+                    }
             }
         }
+        private List<Renderer> Renderers { get
+            {
+                List<Renderer> renderers = FindObjectsOfType<Renderer>().ToList();
+                renderers.AddRange(FindObjectsOfType<SkinnedMeshRenderer>().Select((smr) => smr as Renderer));
+                renderers.AddRange(FindObjectsOfType<MeshRenderer>().Select((mr) => mr as Renderer));
+                renderers = renderers.Where((x) => x.gameObject.activeInHierarchy && x.enabled).ToList();
+                return renderers;
+            } }
         private void SerializeAllMaterials(bool savePersistent = false)
         {
-            var renderers = FindObjectsOfType<MeshRenderer>()
-                .Where((x) => x.gameObject.activeInHierarchy && x.enabled);
-                
-            SerializeMaterials(renderers, savePersistent);
+            SerializeMaterials(Renderers, savePersistent);
         }
 
         private void DeserializeMaterials(IEnumerable<Renderer> renderers)
@@ -731,8 +754,7 @@ namespace XREngine
 
         private void DeserializeAllMaterials()
         {
-            var renderers = FindObjectsOfType<MeshRenderer>();
-            DeserializeMaterials(renderers);
+            DeserializeMaterials(Renderers);
             matRegistry = null;
             matLinks = null;
             texRegistry = null;
@@ -810,7 +832,7 @@ namespace XREngine
         Dictionary<MeshRegistryKey, UnityEngine.Mesh> glRegistry;
         private void CreateUVBakedMeshes(bool savePersistent = false)
         {
-            var renderers = FindObjectsOfType<Renderer>().Where((renderer) => renderer.gameObject.activeInHierarchy && renderer.enabled);
+            var renderers = Renderers.Where((renderer) => renderer.gameObject.activeInHierarchy && renderer.enabled);
             foreach(var renderer in renderers)
             {
                 bool isSkinned = renderer.GetType() == typeof(SkinnedMeshRenderer);
@@ -834,7 +856,7 @@ namespace XREngine
                 
                 if ((hasLightmap && PipelineSettings.lightmapMode == LightmapMode.BAKE_SEPARATE) ||
                      hasTxrOffset ||
-                     Regex.IsMatch(AssetDatabase.GetAssetPath(mesh), @".*\.glb"))
+                     Regex.IsMatch(AssetDatabase.GetAssetPath(mesh), @".*\.[(glb)(fbx)]"))
                 {
 
                     var nuMesh = GenerateMesh(renderer, mesh, savePersistent);
@@ -865,7 +887,6 @@ namespace XREngine
                         ((SkinnedMeshRenderer)renderer).sharedMesh = nuMesh;
                     }
                     glLinks[nuMesh] = mesh;
-                    mesh = nuMesh;
                 }
             }
             AssetDatabase.Refresh();
@@ -909,19 +930,48 @@ namespace XREngine
             //MeshStager.ResetAll();
         }
 
-        private void RestoreGLLinks(IEnumerable<MeshFilter> filts)
+        private Mesh RestoreGLLink(Mesh mesh, Renderer renderer)
+        {
+            if (renderer.GetType() == typeof(SkinnedMeshRenderer))
+            {
+                if (mesh != null &&
+                    glLinks.ContainsKey(mesh))
+                {
+                    var originalMesh = glLinks[mesh];
+                    ((SkinnedMeshRenderer)renderer).sharedMesh = originalMesh;
+                    glRegistry.Remove(new MeshRegistryKey(originalMesh, renderer));
+                }
+            }
+            else
+            {
+                if(mesh != null && 
+                   glLinks.ContainsKey(mesh))
+                {
+                    var originalMesh = glLinks[mesh];
+                    renderer.GetComponent<MeshFilter>().sharedMesh = originalMesh;
+                    glRegistry.Remove(new MeshRegistryKey(originalMesh, renderer));
+                }
+            }
+            return mesh;
+        }
+
+        private void RestoreGLLinks(IEnumerable<Renderer> rends)
         {
             List<Mesh> toRemove = new List<Mesh>();
-            foreach (var filt in filts)
+
+            foreach (var rend in rends)
             {
-                if (filt &&
-                    filt.sharedMesh != null &&
-                    glLinks.ContainsKey(filt.sharedMesh))
+                Mesh mesh = null;
+                if (rend.GetType() == typeof(SkinnedMeshRenderer))
                 {
-                    toRemove.Add(filt.sharedMesh);
-                    var originalMesh = glLinks[filt.sharedMesh];
-                    filt.sharedMesh = originalMesh;
-                    glRegistry.Remove(new MeshRegistryKey(originalMesh, filt.GetComponent<MeshRenderer>()));
+                    mesh = ((SkinnedMeshRenderer)rend).sharedMesh;
+                } else
+                {
+                    mesh = rend.GetComponent<MeshFilter>().sharedMesh;
+                }
+                if (mesh)
+                {
+                    toRemove.Add(RestoreGLLink(mesh, rend));
                 }
             }
             foreach(var doneMesh in toRemove)
@@ -934,8 +984,7 @@ namespace XREngine
         {
             if (glLinks != null)
             {
-                MeshFilter[] filts = GameObject.FindObjectsOfType<MeshFilter>();
-                RestoreGLLinks(filts);
+                RestoreGLLinks(Renderers);
             }
             glLinks = null;
             glRegistry = null;
@@ -1110,12 +1159,12 @@ namespace XREngine
             {
                 FormatForExportingColliders();
             }
-            
+
             if (PipelineSettings.InstanceMeshes && PipelineSettings.BasicGLTFConvert)
             {
                 FormatMeshInstancing();
             }
-            
+
             SerializeAllMaterials();
 
             CreateBakedMeshes(savePersistent);
@@ -1150,7 +1199,10 @@ namespace XREngine
                CleanUpExportingColliders();
             }
 
-
+            if (PipelineSettings.InstanceMeshes && PipelineSettings.BasicGLTFConvert)
+            {
+                CleanupMeshInstancing();
+            }
             //restore materials
             StandardToSeinPBR.RestoreMaterials();
             if (PipelineSettings.meshMode == MeshExportMode.COMBINE)
@@ -1173,10 +1225,7 @@ namespace XREngine
                 CleanupExportEnvmap();
             }
             
-            if(PipelineSettings.InstanceMeshes && PipelineSettings.BasicGLTFConvert)
-            {
-                CleanupMeshInstancing();
-            }
+            
             
             CleanupLightmapping();
             CleanupLights();

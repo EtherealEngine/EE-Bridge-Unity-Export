@@ -38,6 +38,7 @@ namespace XREngine
     [InitializeOnLoad]
     public static class PipelineSettings
     {
+
         [System.Serializable]
         public struct Data
         {
@@ -169,7 +170,16 @@ namespace XREngine
 
         static PipelineSettings()
         {
-            ReadSettingsFromConfig();
+            Initialize();
+            EditorSceneManager.activeSceneChangedInEditMode += (_old, _new) => Initialize();
+        }
+
+        static void Initialize()
+        {
+            if (!ReadSettingsFromConfig())
+            {
+                CombinedTextureResolution = 2048;
+            }
         }
 
         public static bool ReadSettingsFromConfig()
