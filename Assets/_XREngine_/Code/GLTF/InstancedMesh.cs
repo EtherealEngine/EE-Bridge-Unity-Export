@@ -77,18 +77,20 @@ namespace XREngine.XREngineProject
         public static InstanceMeshNode[] GenerateMeshNodes()
         {
         
-            var iNodes = FindObjectsOfType<InstancedMesh>();
-            var parents = iNodes.Where((iNode) => iNode.applyToChildren);
+            var iNodes = FindObjectsOfType<InstancedMesh>().ToList();
+            var parents = iNodes.Where((iNode) => iNode.applyToChildren).ToArray();
             foreach(var parent in parents)
             {
-                foreach(var renderer in XREUnity.ChildComponents<MeshRenderer>(parent.transform))
+                var children = XREUnity.ChildComponents<MeshRenderer>(parent.transform);
+                foreach (var renderer in children)
                 {
-                    if(!renderer.gameObject.GetComponent<InstancedMesh>())
+                    if(!renderer.GetComponent<InstancedMesh>())
                     {
                         var iNode = renderer.gameObject.AddComponent<InstancedMesh>();
                         GeneratedNodes.Add(iNode);
-                        iNodes.Append(iNode);
+                        iNodes.Add(iNode);
                     }
+
                 }
             }
             
