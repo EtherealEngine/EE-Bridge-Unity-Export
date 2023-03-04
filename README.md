@@ -1,4 +1,4 @@
-# Unity-to-XREngine Exporter
+# Unity-to-Ethereal-Engine Exporter
 Built-in export pipeline for Unity to https://github.com/XRFoundation/XREngine
 # Usage
 
